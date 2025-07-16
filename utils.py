@@ -2,16 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-def dice_multi_class(preds, targets):
-    smooth = 0.0 #1.0
-    assert preds.shape == targets.shape
-    labels = np.unique(targets)[1:]
+def dice_multi_class(preds, targets, smooth=0.0):
+    """
+    Compute the Dice score for multi-class segmentation.
+    
+    Parameters:
+        preds (np.ndarray): Predicted segmentation mask of shape (H, W, C).
+        targets (np.ndarray): Ground truth segmentation mask of shape (H, W, C).
+    """
+
+    assert preds.shape == targets.shape, "preds and targets must have the same shape"
+
     dices = []
+    labels = np.unique(targets)[1:] 
     for label in labels:
         pred = preds == label
         target = targets == label
         intersection = (pred * target).sum()
         dices.append((2.0 * intersection + smooth) / (pred.sum() + target.sum() + smooth))
+
     return np.mean(dices)
 
 def show_mask(mask, ax, mask_color=None, alpha=0.5):
@@ -78,6 +87,8 @@ def resize_grayscale_to_rgb_and_resize(array, image_size):
         resized_array[i] = img_array
     
     return resized_array
+
+
 def mask2D_to_bbox(gt2D, file):
     try:
         y_indices, x_indices = np.where(gt2D > 0)
@@ -116,8 +127,25 @@ def mask3D_to_bbox(gt3D, file):
     boxes3d = np.array([x_min, y_min, z_min, x_max, y_max, z_max])
     return boxes3d
 
-def preprocess(image_data, window_level=None, window_width=None):
+def preprocess(
+        image_data: np.ndarray, 
+        window_level: float | None = None, 
+        window_width: float | None = None
+    ) -> np.ndarray:
+    """
+    Preprocess the image data.
 
+    Parameters:
+        image_data (np.ndarray): Input image data.
+        window_level (float): Window level.
+        window_width (float): Window width.
+
+    Returns:
+        np.ndarray: Preprocessed image data.
+    """
+    if window_level is None or window_width is None:
+        return image_data
+    
     lower_bound = window_level - window_width / 2
     upper_bound = window_level + window_width / 2
     image_data_pre = np.clip(image_data, lower_bound, upper_bound)
@@ -126,6 +154,7 @@ def preprocess(image_data, window_level=None, window_width=None):
         / (np.max(image_data_pre) - np.min(image_data_pre))
         * 255.0
     )
+    
     #image_data_pre[image_data == 0] = 0
     return image_data_pre
 
