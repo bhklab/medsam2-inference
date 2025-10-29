@@ -274,10 +274,10 @@ class MedSAM3DInference:
 
 @click.command()
 @click.argument('dataset_csv', type=click.Path(exists=True))
-@click.argument('output_dir',  type=click.Path)
+@click.argument('output_dir',  type=click.Path())
 @click.option('--window_level', type=click.INT)
 @click.option('--window_width', type=click.INT)
-@click.option('--overlay_bbox', type=click.BOOL)
+@click.option('--overlay_bbox', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
