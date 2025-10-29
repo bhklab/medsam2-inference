@@ -1,20 +1,69 @@
 [workspace]
-authors = ["Joshua Siraj <joshua.siraj@uhn.ca>"]
-channels = ["conda-forge", "pytorch"] 
 name = "medsam2_inference"
+authors = ["Joshua Siraj <joshua.siraj@uhn.ca>",
+           "Katy Scott <k.l.scott16@gmail.com>"]
+description = "Run MedSAM2 inference in a Docker container."
+license = "MIT"
+channels = ["conda-forge", "pytorch"] 
 platforms = ["linux-64"]
-version = "0.1.0"
 
-[tasks]
-download-weights = "./MedSAM2/download.sh"
+[environments]
+quality = { features = ["quality"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+
+[activation]
+# convenient variables which can be used in scripts
+env.CONFIG = "${PIXI_PROJECT_ROOT}/config"
+env.METADATA = "${PIXI_PROJECT_ROOT}/metadata"
+env.LOGS = "${PIXI_PROJECT_ROOT}/logs"
+env.RAWDATA = "${PIXI_PROJECT_ROOT}/data/rawdata"
+env.PROCDATA = "${PIXI_PROJECT_ROOT}/data/procdata"
+env.RESULTS = "${PIXI_PROJECT_ROOT}/data/results"
+env.SCRIPTS = "${PIXI_PROJECT_ROOT}/workflow/scripts"
+
 
 [dependencies]
 python = "==3.12"
 pytorch-cuda = "==12.4"
 
-
 [pypi-dependencies]
 MedSAM2 = { path = "MedSAM2", editable = true, extras = ["dev"] }
 simpleitk = ">=2.5.2, <3"
 pydantic = ">=2.11.7, <3"
+damply = ">=0.26.0, <0.27"
 
+[tasks]
+download-weights = "./MedSAM2/download.sh"
+
+############################################## QUALITY ###############################################
+# Quality includes linting, type checking, and formatting
+[feature.quality.dependencies]
+ruff = "*"
+
+[feature.quality.tasks]
+ruff-check.cmd = ["ruff", "check"]
+ruff-check.inputs = ["config/ruff.toml", "workflow"]
+ruff-check.description = "Run ruff check"
+
+ruff-format.cmd = ["ruff", "format"]
+ruff-format.inputs = ["config/ruff.toml", "workflow"]
+ruff-format.depends-on = ["ruff-check"]
+ruff-format.description = "Run ruff format, run check first"
+
+qc.depends-on = ["ruff-format", "ruff-check"]
+qc.description = "Quality check: ruff check and format"
+
+############################################## DOCS ################################################
+
+[feature.docs.dependencies]
+mkdocs = "*"
+mkdocs-include-markdown-plugin = ">=7.0.0,<8"
+
+[feature.docs.tasks.doc-build]
+cmd = "mkdocs build -f mkdocs.yaml"
+description = "Build documentation with mkdocs"
+
+[feature.docs.tasks.doc-serve]
+cmd = "mkdocs serve -f mkdocs.yaml"
+depends-on = ["doc-build"]
+description = "Serve documentation with mkdocs, runs doc-build first"
