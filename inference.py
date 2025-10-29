@@ -278,11 +278,13 @@ class MedSAM3DInference:
 @click.option('--window_level', type=click.INT)
 @click.option('--window_width', type=click.INT)
 @click.option('--overlay_bbox', is_flag=True, default=False)
+@click.option('--propagate_with_bbox', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
               window_width:int = 400,
-              overlay_bbox:bool = False):
+              overlay_bbox:bool = False,
+              propagate_with_bbox:bool = False):
     """Run 3D segmentation with MedSAM2 on the files in dataset_csv. Save out the results to output_dir.
 
     Parameters
@@ -314,6 +316,7 @@ def inference(dataset_csv:str,
         window_level=window_level,
         window_width=window_width,
         overlay_bbox=overlay_bbox,
+        propagate_with_bbox=propagate_with_bbox,
     )
 
     inference_module = MedSAM3DInference(config)
