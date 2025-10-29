@@ -391,3 +391,7 @@ site/
 checkpoints/
 
 infer_3D_512_nii_CTLesion_demo.py
+
+data/
+
+temp_output/
