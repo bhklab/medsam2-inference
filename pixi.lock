@@ -138,6 +138,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/4d/23c4e4f09da849e127e9f123241946c23c1e30f45a88366879e064211815/mistune-3.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/83/3b/ee8c03de875507d8d56c86b5ede71514812d657a4a600844d3fa73478098/monai-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/2e/9ea80ca55b73530b7639c6f146a58f636ddfe5a852ad467a44fe3e80d809/moreorless-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
@@ -410,6 +411,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7a/f0/8282d9641415e9e33df173516226b404d367a0fc55e1a60424a152913abc/mistune-3.1.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/83/3b/ee8c03de875507d8d56c86b5ede71514812d657a4a600844d3fa73478098/monai-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/2e/9ea80ca55b73530b7639c6f146a58f636ddfe5a852ad467a44fe3e80d809/moreorless-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
@@ -667,6 +669,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7a/f0/8282d9641415e9e33df173516226b404d367a0fc55e1a60424a152913abc/mistune-3.1.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/83/3b/ee8c03de875507d8d56c86b5ede71514812d657a4a600844d3fa73478098/monai-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/2e/9ea80ca55b73530b7639c6f146a58f636ddfe5a852ad467a44fe3e80d809/moreorless-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
@@ -3623,6 +3626,98 @@ packages:
   - pkg:pypi/mkdocs-include-markdown-plugin?source=hash-mapping
   size: 31005
   timestamp: 1761499858579
+- pypi: https://files.pythonhosted.org/packages/83/3b/ee8c03de875507d8d56c86b5ede71514812d657a4a600844d3fa73478098/monai-1.5.1-py3-none-any.whl
+  name: monai
+  version: 1.5.1
+  sha256: 3112e6ce63352f2ebb8a324a5c199b026aa8e61e914b4912cda3e890e6f7e7c5
+  requires_dist:
+  - numpy>=1.24,<3.0
+  - torch>=2.4.1
+  - clearml>=1.10.0rc0 ; extra == 'all'
+  - einops ; extra == 'all'
+  - fire ; extra == 'all'
+  - gdown>=4.7.3 ; extra == 'all'
+  - h5py ; extra == 'all'
+  - huggingface-hub ; extra == 'all'
+  - itk>=5.2 ; extra == 'all'
+  - jsonschema ; extra == 'all'
+  - lmdb ; extra == 'all'
+  - lpips==0.1.4 ; extra == 'all'
+  - matplotlib>=3.6.3 ; extra == 'all'
+  - mlflow>=2.12.2 ; extra == 'all'
+  - nibabel ; extra == 'all'
+  - ninja ; extra == 'all'
+  - nvidia-ml-py ; extra == 'all'
+  - onnx>=1.13.0 ; extra == 'all'
+  - openslide-bin ; extra == 'all'
+  - openslide-python ; extra == 'all'
+  - optuna ; extra == 'all'
+  - pandas ; extra == 'all'
+  - pillow ; extra == 'all'
+  - psutil ; extra == 'all'
+  - pyamg>=5.0.0,<5.3.0 ; extra == 'all'
+  - pydicom ; extra == 'all'
+  - pynrrd ; extra == 'all'
+  - pytorch-ignite==0.4.11 ; extra == 'all'
+  - pyyaml ; extra == 'all'
+  - scikit-image>=0.14.2 ; extra == 'all'
+  - tensorboard ; extra == 'all'
+  - tensorboardx ; extra == 'all'
+  - torchio ; extra == 'all'
+  - torchvision ; extra == 'all'
+  - tqdm>=4.47.0 ; extra == 'all'
+  - zarr ; extra == 'all'
+  - nni ; sys_platform == 'linux' and 'aarch' not in platform_machine and 'arm' not in platform_machine and extra == 'all'
+  - cucim-cu12 ; python_full_version >= '3.9' and python_full_version < '3.11' and sys_platform == 'linux' and extra == 'all'
+  - imagecodecs ; (sys_platform == 'darwin' and extra == 'all') or (sys_platform == 'linux' and extra == 'all')
+  - tifffile ; (sys_platform == 'darwin' and extra == 'all') or (sys_platform == 'linux' and extra == 'all')
+  - onnxruntime ; python_full_version < '3.11' and extra == 'all'
+  - transformers>=4.36.0,<4.41.0 ; python_full_version < '3.11' and extra == 'all'
+  - scipy>=1.12.0 ; python_full_version >= '3.9' and extra == 'all'
+  - clearml ; extra == 'clearml'
+  - cucim-cu12 ; python_full_version >= '3.9' and python_full_version < '3.11' and sys_platform == 'linux' and extra == 'cucim'
+  - einops ; extra == 'einops'
+  - fire ; extra == 'fire'
+  - gdown>=4.7.3 ; extra == 'gdown'
+  - h5py ; extra == 'h5py'
+  - huggingface-hub ; extra == 'huggingface-hub'
+  - pytorch-ignite==0.4.11 ; extra == 'ignite'
+  - imagecodecs ; (sys_platform == 'darwin' and extra == 'imagecodecs') or (sys_platform == 'linux' and extra == 'imagecodecs')
+  - itk>=5.2 ; extra == 'itk'
+  - jsonschema ; extra == 'jsonschema'
+  - lmdb ; extra == 'lmdb'
+  - lpips==0.1.4 ; extra == 'lpips'
+  - matplotlib>=3.6.3 ; extra == 'matplotlib'
+  - mlflow>=2.12.2 ; extra == 'mlflow'
+  - nibabel ; extra == 'nibabel'
+  - ninja ; extra == 'ninja'
+  - nni ; sys_platform == 'linux' and 'aarch' not in platform_machine and 'arm' not in platform_machine and extra == 'nni'
+  - onnx>=1.13.0 ; extra == 'onnx'
+  - onnxruntime ; python_full_version < '3.11' and extra == 'onnx'
+  - openslide-bin ; extra == 'openslide'
+  - openslide-python ; extra == 'openslide'
+  - optuna ; extra == 'optuna'
+  - packaging ; extra == 'packaging'
+  - pandas ; extra == 'pandas'
+  - pillow!=8.3.0 ; extra == 'pillow'
+  - polygraphy ; extra == 'polygraphy'
+  - psutil ; extra == 'psutil'
+  - pyamg>=5.0.0,<5.3.0 ; extra == 'pyamg'
+  - pydicom ; extra == 'pydicom'
+  - pynrrd ; extra == 'pynrrd'
+  - nvidia-ml-py ; extra == 'pynvml'
+  - pyyaml ; extra == 'pyyaml'
+  - scipy>=1.12.0 ; python_full_version >= '3.9' and extra == 'scipy'
+  - scikit-image>=0.14.2 ; extra == 'skimage'
+  - tensorboard ; extra == 'tensorboard'
+  - tensorboardx ; extra == 'tensorboardx'
+  - tifffile ; (sys_platform == 'darwin' and extra == 'tifffile') or (sys_platform == 'linux' and extra == 'tifffile')
+  - torchio ; extra == 'torchio'
+  - torchvision ; extra == 'torchvision'
+  - tqdm>=4.47.0 ; extra == 'tqdm'
+  - transformers>=4.36.0,<4.41.0 ; python_full_version < '3.11' and extra == 'transformers'
+  - zarr ; extra == 'zarr'
+  requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/fa/2e/9ea80ca55b73530b7639c6f146a58f636ddfe5a852ad467a44fe3e80d809/moreorless-0.5.0-py3-none-any.whl
   name: moreorless
   version: 0.5.0

@@ -11,13 +11,12 @@ import torch
 from sam2.build_sam import build_sam2_video_predictor_npz
 
 from utils import (
-    dice_multi_class, 
     resize_grayscale_to_rgb_and_resize, 
     mask3D_to_bbox, 
     preprocess, 
-    AddedPathLength, 
     overlay_bbox
 )
+from evaluate import Evaluator
 
 torch.set_float32_matmul_precision("high")
 torch.manual_seed(2024)
@@ -61,6 +60,20 @@ class MedSAM3DInferenceConfig(BaseModel):
     overlay_bbox: bool = Field(
         default=False, 
         description="Whether to overlay the bounding box on the image."
+    )
+    
+    evaluation_metrics: list[str] = Field(
+        default = [
+            "volume_dice", 
+            "jaccard", 
+            "hausdorff", 
+            "surface_dice", 
+            "panoptic_quality",
+            "added_path_length", 
+            "false_negative_volume", 
+            "false_negative_path_length"
+        ],
+        description="Metrics to evaluate the segmentation results."
     )
 
 
@@ -107,6 +120,8 @@ class MedSAM3DInference:
 
         with open(Path(self.config.output_dir) / "config.json", "w") as f:
             json.dump(self.config.model_dump(), f, indent=4)
+
+        evaluator = Evaluator(metrics=self.config.evaluation_metrics)   
 
         results_df = []
 
@@ -246,17 +261,13 @@ class MedSAM3DInference:
 
                     self.predictor.reset_state(inference_state)
 
-                    # Calculate metrics
-                    dice = dice_multi_class(
-                        (segs_3D == 1).astype(np.uint8), (mask_array == 1).astype(np.uint8)
-                    )
-                    apl = AddedPathLength(segs_3D == 1, mask_array == 1)
+                    eval_results = evaluator((segs_3D == 1).astype(np.uint8), (mask_array == 1).astype(np.uint8), spacing)
+
                     results_df.append({
                         "ID": patient_id, 
-                        "Volume_Dice": dice, 
-                        "Added_Path_Length": apl
+                        **eval_results
                     })
-                    print(f"Metrics for {patient_id}: Dice: {dice}, APL: {apl}")
+                    print(f"Evaluation results for {patient_id}: Volume Dice: {eval_results['volume_dice']}, APL: {eval_results['added_path_length']}")
 
                 # Save mask
                 save_mask = sitk.GetImageFromArray(segs_3D)
