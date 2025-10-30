@@ -11,3 +11,14 @@ __pycache__
 checkpoints/
 
 infer_3D_512_nii_CTLesion_demo.py
+
+data/*
+
+logs
+
+temp_output
+
+MedSam2
+
+*.sif
+

@@ -23,6 +23,35 @@ def dice_multi_class(preds, targets, smooth=0.0):
 
     return np.mean(dices)
 
+def overlay_bbox(image: np.ndarray, bbox: np.ndarray, slice_idx: int, output_path: str):
+    """
+    Overlay the bounding box on the image.
+    """
+    image = image[slice_idx]
+    x_min, y_min, x_max, y_max = bbox
+
+    # Create a figure and axis
+    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+    
+    # Display the image
+    ax.imshow(image, cmap='gray')
+    
+    # Draw rectangle on the plot
+    rect = plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
+                        fill=False, edgecolor='red', linewidth=2)
+    ax.add_patch(rect)
+    
+    # Remove axes ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
+    
+    # Save the figure
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
+    
+    return image
+    
+
 def show_mask(mask, ax, mask_color=None, alpha=0.5):
     """
     show mask on the image
@@ -116,7 +145,8 @@ def mask3D_to_bbox(gt3D, file):
     # add perturbation to bounding box coordinates
     D, H, W = gt3D.shape
 
-    z_mid = (z_min + z_max) // 2
+    # z_mid = (z_min + z_max) // 2
+    z_mid = np.median(z_indices).astype(int)
     gt_mid = gt3D[z_mid]
 
     box_2d = mask2D_to_bbox(gt_mid, file)
@@ -203,3 +233,10 @@ def AddedPathLength(auto, gt):
     apl = (edge_gt > edge_auto).astype(int).sum()
     
     return apl 
+
+
+def ShortAxisDiameter(mask):
+    """Calculate short axis diameter of a segmentation mask"""
+    
+
+    return None
