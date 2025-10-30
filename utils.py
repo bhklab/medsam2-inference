@@ -1,7 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+
 
 def dice_multi_class(preds, targets, smooth=0.0):
     """
@@ -124,7 +126,7 @@ def pad_bbox(box:np.array,
              spacing:np.array = None
              ):
     # Get full image dimensions to keep padding within image size
-    # H, W, D (y, x, z)
+    # D, H, W (z, y, x)
     mask_shape = mask.shape
 
     if spacing is not None: # Use the actual image spacing to calculate the padding
@@ -142,22 +144,24 @@ def pad_bbox(box:np.array,
         # This matches the behaviour of the spacing option
         padding = padding * np.ones(len(mask_shape))
     
-    pad_x_min = max(0, box[0] - padding[0]) 
+    pad_x_min = max(0, box[0] - padding[0])
     pad_y_min = max(0, box[1] - padding[1])
     # Handling 2D bounding box
     if len(box) == 4:
-        pad_x_max = min(mask_shape[1], box[2] + padding[0])
-        pad_y_max = min(mask_shape[0], box[3] + padding[1])
+        mask_H, mask_W = mask_shape[0], mask_shape[1]
+        pad_x_max = min(mask_W, box[2] + padding[0])
+        pad_y_max = min(mask_H, box[3] + padding[1])
 
         padded_box = np.array([pad_x_min, pad_y_min,
                                pad_x_max, pad_y_max])
 
     # Handling 3D bounding box
     if len(box) == 6:
+        mask_D, mask_H, mask_W = mask_shape[0], mask_shape[1], mask_shape[2]
         pad_z_min = max(0, box[2] - padding[2])
-        pad_x_max = min(mask_shape[1], box[3] + padding[0])
-        pad_y_max = min(mask_shape[0], box[4] + padding[1]) 
-        pad_z_max = min(mask_shape[2], box[5] + padding[2])
+        pad_x_max = min(mask_W, box[3] + padding[0])
+        pad_y_max = min(mask_H, box[4] + padding[1]) 
+        pad_z_max = min(mask_D, box[5] + padding[2])
         
         padded_box = np.array([pad_x_min, pad_y_min, pad_z_min,
                                pad_x_max, pad_y_max, pad_z_max])
