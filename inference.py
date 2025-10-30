@@ -293,11 +293,15 @@ class MedSAM3DInference:
 @click.argument('output_dir',  type=click.Path())
 @click.option('--window_level', type=click.INT)
 @click.option('--window_width', type=click.INT)
+@click.option('--pad_bbox', type=click.INT)
+@click.option('--pad_with_spacing', type=click.BOOL)
 @click.option('--overlay_bbox', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
               window_width:int = 400,
+              pad_bbox:int = 0,
+              pad_with_spacing:bool = False,
               overlay_bbox:bool = False):
     """Run 3D segmentation with MedSAM2 on the files in dataset_csv. Save out the results to output_dir.
 
@@ -329,8 +333,8 @@ def inference(dataset_csv:str,
         output_dir=output_dir,
         window_level=window_level,
         window_width=window_width,
-        pad_bbox=5,
-        pad_with_spacing=True,
+        pad_bbox=pad_bbox,
+        pad_with_spacing=pad_with_spacing,
         overlay_bbox=overlay_bbox,
     )
 
