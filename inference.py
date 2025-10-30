@@ -58,6 +58,14 @@ class MedSAM3DInferenceConfig(BaseModel):
         default=False,
         description="Whether to propagate the mask with the bounding box.",
     )
+    pad_bbox: int = Field(
+        default = 0, 
+        description="Padding width to apply to bounding box in all dimensions"
+    )
+    pad_with_spacing: bool = Field(
+        default = False,
+        description="Whether to use the actual image spacing when padding the bounding box. Will scale the pad_bbox value in each dimension with the image spacing."
+    )
     overlay_bbox: bool = Field(
         default=False, 
         description="Whether to overlay the bounding box on the image."
@@ -147,16 +155,24 @@ class MedSAM3DInference:
                 segs_3D = np.zeros(image_array.shape, dtype=np.uint8)
 
                 # Get bounding box
+                if self.config.pad_with_spacing:
+                    pad_spacing = spacing
+                else:
+                    pad_spacing = None
+                    
                 x_min, y_min, z_min, x_max, y_max, z_max = mask3D_to_bbox(
-                    mask_array, mask_path
+                    gt3D = mask_array, 
+                    file = mask_path,
+                    padding = self.config.pad_bbox,
+                    spacing = pad_spacing
                 )
                 bbox2d = [x_min, y_min, x_max, y_max]
 
                 # Get z-axis coordinates
-                zs, _, _ = np.where(mask_array > 0)
-                zs = np.unique(zs)
-                assert z_min == min(zs)
-                assert z_max == max(zs)
+                # zs, _, _ = np.where(mask_array > 0)
+                # zs = np.unique(zs)
+                # assert z_min == min(zs)
+                # assert z_max == max(zs)
                 z_mid_orig = (z_min + z_max) // 2
                 z_mid = z_mid_orig - z_min
 
@@ -313,6 +329,8 @@ def inference(dataset_csv:str,
         output_dir=output_dir,
         window_level=window_level,
         window_width=window_width,
+        pad_bbox=5,
+        pad_with_spacing=True,
         overlay_bbox=overlay_bbox,
     )
 
