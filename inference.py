@@ -53,9 +53,9 @@ class MedSAM3DInferenceConfig(BaseModel):
         description="Standard deviation values for each channel.",
     )
 
-    propagate_with_bbox: bool = Field(
-        default=True,
-        description="Whether to propagate the mask with the bounding box.",
+    propagate_with_gt: bool = Field(
+        default=False,
+        description="Whether to propagate the mask with the ground truth mask.",
     )
     pad_bbox: int = Field(
         default = 0, 
@@ -184,10 +184,6 @@ class MedSAM3DInference:
                 bbox2d = [x_min, y_min, x_max, y_max]
 
                 # Get z-axis coordinates
-                # zs, _, _ = np.where(mask_array > 0)
-                # zs = np.unique(zs)
-                # assert z_min == min(zs)
-                # assert z_max == max(zs)
                 z_mid_orig = (z_min + z_max) // 2
                 z_mid = z_mid_orig - z_min
 
@@ -231,7 +227,9 @@ class MedSAM3DInference:
                     )
 
                     # Create mask prompt
-                    if self.config.propagate_with_bbox:
+                    if self.config.propagate_with_gt:
+                        mask_prompt = (cropped_mask[z_mid] == 1).astype(np.uint8)
+                    else:
                         _, _, out_mask_logits = self.predictor.add_new_points_or_box(
                             inference_state=inference_state,
                             frame_idx=z_mid,
@@ -239,8 +237,7 @@ class MedSAM3DInference:
                             box=bbox2d,
                         )
                         mask_prompt = (out_mask_logits[0] > 0.0).squeeze(0).cpu().numpy().astype(np.uint8)
-                    else:  # gt
-                        mask_prompt = (cropped_mask[z_mid] == 1).astype(np.uint8)
+                        
 
                     _, _, masks = self.predictor.add_new_mask(
                         inference_state, 
@@ -307,7 +304,7 @@ class MedSAM3DInference:
 @click.option('--pad_bbox', type=click.INT, default=0)
 @click.option('--pad_with_spacing', is_flag= True, default=False)
 @click.option('--overlay_bbox', is_flag=True, default=False)
-@click.option('--propagate_with_bbox', is_flag=True, default=False)
+@click.option('--propagate_with_gt', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
@@ -315,7 +312,7 @@ def inference(dataset_csv:str,
               pad_bbox:int = 0,
               pad_with_spacing:bool = False,
               overlay_bbox:bool = False,
-              propagate_with_bbox:bool = False) -> None:
+              propagate_with_gt:bool = False) -> None:
     """Run 3D segmentation with MedSAM2 on the files in dataset_csv. Save out the results to output_dir.
 
     Parameters
@@ -338,6 +335,12 @@ def inference(dataset_csv:str,
         Default set for soft tissues in head and neck.
     overlay_bbox:bool (default = False)
         Whether to overlay the bounding box on the image.
+    propagate_with_gt:bool (default = False)
+        Whether to propagate the mask with the ground truth mask. Default is False, which propagates with the bounding box.
+    pad_bbox:int (default = 0)
+        Padding width to apply to bounding box in all dimensions
+    pad_with_spacing:bool (default = False)
+        Whether to use the actual image spacing when padding the bounding box. Will scale the pad_bbox value in each dimension with the image spacing.
     """
     config = MedSAM3DInferenceConfig(
         dataset_csv=dataset_csv,
@@ -349,7 +352,7 @@ def inference(dataset_csv:str,
         pad_bbox=pad_bbox,
         pad_with_spacing=pad_with_spacing,
         overlay_bbox=overlay_bbox,
-        propagate_with_bbox=propagate_with_bbox,
+        propagate_with_gt=propagate_with_gt,
     )
 
     inference_module = MedSAM3DInference(config)
