@@ -1,22 +1,22 @@
-import pandas as pd
-import numpy as np
-from pydantic import BaseModel, Field
-from pathlib import Path
 import json
-from tqdm import tqdm
-import click
+from pathlib import Path
 
+import click
+import numpy as np
+import pandas as pd
 import SimpleITK as sitk
 import torch
+from pydantic import BaseModel, Field
 from sam2.build_sam import build_sam2_video_predictor_npz
+from tqdm import tqdm
 
 from utils import (
-    dice_multi_class, 
-    resize_grayscale_to_rgb_and_resize, 
-    mask3D_to_bbox, 
-    preprocess, 
-    AddedPathLength, 
-    overlay_bbox
+    AddedPathLength,
+    dice_multi_class,
+    mask3D_to_bbox,
+    overlay_bbox,
+    preprocess,
+    resize_grayscale_to_rgb_and_resize,
 )
 
 torch.set_float32_matmul_precision("high")
@@ -55,8 +55,16 @@ class MedSAM3DInferenceConfig(BaseModel):
     )
 
     propagate_with_bbox: bool = Field(
-        default=False,
+        default=True,
         description="Whether to propagate the mask with the bounding box.",
+    )
+    pad_bbox: int = Field(
+        default = 0, 
+        description="Padding width to apply to bounding box in all dimensions"
+    )
+    pad_with_spacing: bool = Field(
+        default = False,
+        description="Whether to use the actual image spacing when padding the bounding box. Will scale the pad_bbox value in each dimension with the image spacing."
     )
     overlay_bbox: bool = Field(
         default=False, 
@@ -147,16 +155,24 @@ class MedSAM3DInference:
                 segs_3D = np.zeros(image_array.shape, dtype=np.uint8)
 
                 # Get bounding box
+                if self.config.pad_with_spacing:
+                    pad_spacing = np.array(spacing)
+                else:
+                    pad_spacing = None
+                    
                 x_min, y_min, z_min, x_max, y_max, z_max = mask3D_to_bbox(
-                    mask_array, mask_path
+                    gt3D = mask_array, 
+                    mask_path = mask_path,
+                    padding = self.config.pad_bbox,
+                    spacing = pad_spacing
                 )
                 bbox2d = [x_min, y_min, x_max, y_max]
 
                 # Get z-axis coordinates
-                zs, _, _ = np.where(mask_array > 0)
-                zs = np.unique(zs)
-                assert z_min == min(zs)
-                assert z_max == max(zs)
+                # zs, _, _ = np.where(mask_array > 0)
+                # zs = np.unique(zs)
+                # assert z_min == min(zs)
+                # assert z_max == max(zs)
                 z_mid_orig = (z_min + z_max) // 2
                 z_mid = z_mid_orig - z_min
 
@@ -275,14 +291,18 @@ class MedSAM3DInference:
 @click.command()
 @click.argument('dataset_csv', type=click.Path(exists=True))
 @click.argument('output_dir',  type=click.Path())
-@click.option('--window_level', type=click.INT)
-@click.option('--window_width', type=click.INT)
+@click.option('--window_level', type=click.INT, default=40)
+@click.option('--window_width', type=click.INT, default=400)
+@click.option('--pad_bbox', type=click.INT, default=0)
+@click.option('--pad_with_spacing', is_flag= True, default=False)
 @click.option('--overlay_bbox', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
               window_width:int = 400,
-              overlay_bbox:bool = False):
+              pad_bbox:int = 0,
+              pad_with_spacing:bool = False,
+              overlay_bbox:bool = False) -> None:
     """Run 3D segmentation with MedSAM2 on the files in dataset_csv. Save out the results to output_dir.
 
     Parameters
@@ -313,6 +333,8 @@ def inference(dataset_csv:str,
         output_dir=output_dir,
         window_level=window_level,
         window_width=window_width,
+        pad_bbox=pad_bbox,
+        pad_with_spacing=pad_with_spacing,
         overlay_bbox=overlay_bbox,
     )
 

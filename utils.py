@@ -1,6 +1,9 @@
-import numpy as np
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
 from PIL import Image
+
 
 def dice_multi_class(preds, targets, smooth=0.0):
     """
@@ -117,43 +120,105 @@ def resize_grayscale_to_rgb_and_resize(array, image_size):
     return resized_array
 
 
-def mask2D_to_bbox(gt2D, file):
+def pad_bbox(box:np.array,
+             mask:np.array, 
+             padding:int,
+             spacing:np.array = None
+             ):
+    # Get full image dimensions to keep padding within image size
+    # D, H, W (z, y, x)
+    mask_shape = mask.shape
+
+    if spacing is not None: # Use the actual image spacing to calculate the padding
+        # Check that spacing can be applied to this mask's bounding box dimensions
+        if len(spacing) < len(mask_shape):
+            spacing = spacing[0, len(mask_shape)]
+        elif len(spacing) > len(mask_shape):
+            message = "Spacing for padding has more dimensions than the mask image."
+            raise ValueError(message)
+
+        # calculate the number of voxels to pad based on the actual image spacing
+        padding = np.round(padding / spacing)
+    else:
+        # Convert padding into an array with the same length as image dimensions
+        # This matches the behaviour of the spacing option
+        padding = padding * np.ones(len(mask_shape))
+    
+    pad_x_min = max(0, box[0] - padding[0])
+    pad_y_min = max(0, box[1] - padding[1])
+    # Handling 2D bounding box
+    if len(box) == 4:
+        mask_H, mask_W = mask_shape[0], mask_shape[1]
+        pad_x_max = min(mask_W, box[2] + padding[0])
+        pad_y_max = min(mask_H, box[3] + padding[1])
+
+        padded_box = np.array([pad_x_min, pad_y_min,
+                               pad_x_max, pad_y_max])
+
+    # Handling 3D bounding box
+    if len(box) == 6:
+        mask_D, mask_H, mask_W = mask_shape[0], mask_shape[1], mask_shape[2]
+        pad_z_min = max(0, box[2] - padding[2])
+        pad_x_max = min(mask_W, box[3] + padding[0])
+        pad_y_max = min(mask_H, box[4] + padding[1]) 
+        pad_z_max = min(mask_D, box[5] + padding[2])
+        
+        padded_box = np.array([pad_x_min, pad_y_min, pad_z_min,
+                               pad_x_max, pad_y_max, pad_z_max])
+
+    return padded_box.astype(int)
+
+
+def mask2D_to_bbox(gt2D:np.array, 
+                   mask_path:Path, 
+                   padding:int | None = None,
+                   spacing:np.array = None):
     try:
         y_indices, x_indices = np.where(gt2D > 0)
         x_min, x_max = np.min(x_indices), np.max(x_indices)
         y_min, y_max = np.min(y_indices), np.max(y_indices)
-        # add perturbation to bounding box coordinates
-        H, W = gt2D.shape
-        bbox_shift = np.random.randint(0, 6, 1)[0]
-        scale_y, scale_x = gt2D.shape
-        bbox_shift_x = int(bbox_shift * scale_x/256)
-        bbox_shift_y = int(bbox_shift * scale_y/256)
-        x_min = max(0, x_min - bbox_shift_x)
-        x_max = min(W-1, x_max + bbox_shift_x)
-        y_min = max(0, y_min - bbox_shift_y)
-        y_max = min(H-1, y_max + bbox_shift_y)
         boxes = np.array([x_min, y_min, x_max, y_max])
-        return boxes
+
+        if padding:
+            boxes = pad_bbox(box = boxes,
+                             mask = gt2D,
+                             padding = padding,
+                             spacing = spacing)
+        
+        return boxes.astype(int)
     except Exception as e:
-        raise Exception(f'error {e} with file {file} and sum of gts is {gt2D.sum()}')
+        raise Exception(f'error {e} with file {mask_path} and sum of gts is {gt2D.sum()}')
 
 
-def mask3D_to_bbox(gt3D, file):
-    z_indices, _, _ = np.where(gt3D > 0)
-    z_min, z_max = np.min(z_indices), np.max(z_indices)
-    # add perturbation to bounding box coordinates
-    D, H, W = gt3D.shape
-
+def mask3D_to_bbox(gt3D:np.array, 
+                   mask_path:Path, 
+                   padding:int | None = None,
+                   spacing:np.array = None):
+    try:
+         # Find slices in the mask that have label voxels to get z boundaries
+        z_indices, _, _ = np.where(gt3D > 0)
+        z_min, z_max = np.min(z_indices), np.max(z_indices)
+    except Exception as e:
+        raise Exception(f'error {e} with file {mask_path} and sum of gts is {gt3D.sum()}')
+   
+    # Find the centre slice of the mask
     z_mid = np.median(z_indices).astype(int)
+    # Select out this slice from the array
     gt_mid = gt3D[z_mid]
 
-    box_2d = mask2D_to_bbox(gt_mid, file)
+    # Get the x and y mask boundaries using the 2D function
+    box_2d = mask2D_to_bbox(gt_mid, mask_path)
     x_min, y_min, x_max, y_max = box_2d
+    boxes3D = np.array([x_min, y_min, z_min, x_max, y_max, z_max])
 
-    z_min = max(0, z_min)
-    z_max = min(D-1, z_max)
-    boxes3d = np.array([x_min, y_min, z_min, x_max, y_max, z_max])
-    return boxes3d
+    if padding:
+        # Apply padding to bounding box if requested
+        boxes3D = pad_bbox(box = boxes3D,
+                           mask = gt3D,
+                           padding = padding,
+                           spacing = spacing)
+    
+    return boxes3D.astype(int)
 
 def preprocess(
         image_data: np.ndarray, 
