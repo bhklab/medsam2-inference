@@ -4,28 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-
-def dice_multi_class(preds, targets, smooth=0.0):
-    """
-    Compute the Dice score for multi-class segmentation.
-    
-    Parameters:
-        preds (np.ndarray): Predicted segmentation mask of shape (H, W, C).
-        targets (np.ndarray): Ground truth segmentation mask of shape (H, W, C).
-    """
-
-    assert preds.shape == targets.shape, "preds and targets must have the same shape"
-
-    dices = []
-    labels = np.unique(targets)[1:] 
-    for label in labels:
-        pred = preds == label
-        target = targets == label
-        intersection = (pred * target).sum()
-        dices.append((2.0 * intersection + smooth) / (pred.sum() + target.sum() + smooth))
-
-    return np.mean(dices)
-
 def overlay_bbox(image: np.ndarray, bbox: np.ndarray, slice_idx: int, output_path: str):
     """
     Overlay the bounding box on the image.
@@ -251,48 +229,3 @@ def preprocess(
     #image_data_pre[image_data == 0] = 0
     return image_data_pre
 
-def getEdgeOfMask(mask):
-    '''
-    Computes and returns edge of a segmentation mask
-    '''
-    # edge has the pixels which are at the edge of the mask
-    edge = np.zeros_like(mask)
-    
-    # mask_pixels has the pixels which are inside the mask of the automated segmentation result
-    mask_pixels = np.where(mask > 0)
-
-    for idx in range(0,mask_pixels[0].size):
-
-        x = mask_pixels[0][idx]
-        y = mask_pixels[1][idx]
-        z = mask_pixels[2][idx]
-
-        # Count # pixels in 3x3 neighborhood that are in the mask
-        # If sum < 27, then (x, y, z) is on the edge of the mask
-        if mask[x-1:x+2, y-1:y+2, z-1:z+2].sum() < 27:
-            edge[x,y,z] = 1
-            
-    return edge
-
-def AddedPathLength(auto, gt):
-    '''
-    Returns the added path length, in pixels
-    
-    Steps:
-    1. Find pixels at the edge of the mask for both auto and gt
-    2. Count # pixels on the edge of gt that are not in the edge of auto
-    '''
-    
-    # Check if auto and gt have same dimensions. If not, then raise a ValueError
-    if auto.shape != gt.shape:
-        raise ValueError('Shape of auto and gt must be identical!')
-
-    # edge_auto has the pixels which are at the edge of the automated segmentation result
-    edge_auto = getEdgeOfMask(auto)
-    # edge_gt has the pixels which are at the edge of the ground truth segmentation
-    edge_gt = getEdgeOfMask(gt)
-    
-    # Count # pixels on the edge of gt that are on not in the edge of auto
-    apl = (edge_gt > edge_auto).astype(int).sum()
-    
-    return apl 

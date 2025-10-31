@@ -31,6 +31,7 @@ MedSAM2 = { path = "MedSAM2", editable = true, extras = ["dev"] }
 simpleitk = ">=2.5.2, <3"
 pydantic = ">=2.11.7, <3"
 damply = ">=0.26.0, <0.27"
+monai = ">=1.5.1, <2"
 
 [tasks]
 download-weights = "./MedSAM2/download.sh"

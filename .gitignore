@@ -395,3 +395,5 @@ infer_3D_512_nii_CTLesion_demo.py
 temp_output/
 
 MedSAM2/*
+
+*.sif

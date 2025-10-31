@@ -11,13 +11,12 @@ from sam2.build_sam import build_sam2_video_predictor_npz
 from tqdm import tqdm
 
 from utils import (
-    AddedPathLength,
-    dice_multi_class,
-    mask3D_to_bbox,
-    overlay_bbox,
-    preprocess,
-    resize_grayscale_to_rgb_and_resize,
+    resize_grayscale_to_rgb_and_resize, 
+    mask3D_to_bbox, 
+    preprocess, 
+    overlay_bbox
 )
+from evaluate import Evaluator
 
 torch.set_float32_matmul_precision("high")
 torch.manual_seed(2024)
@@ -54,9 +53,9 @@ class MedSAM3DInferenceConfig(BaseModel):
         description="Standard deviation values for each channel.",
     )
 
-    propagate_with_bbox: bool = Field(
-        default=True,
-        description="Whether to propagate the mask with the bounding box.",
+    propagate_with_gt: bool = Field(
+        default=False,
+        description="Whether to propagate the mask with the ground truth mask.",
     )
     pad_bbox: int = Field(
         default = 0, 
@@ -69,6 +68,20 @@ class MedSAM3DInferenceConfig(BaseModel):
     overlay_bbox: bool = Field(
         default=False, 
         description="Whether to overlay the bounding box on the image."
+    )
+    
+    evaluation_metrics: list[str] = Field(
+        default = [
+            "volume_dice", 
+            "jaccard", 
+            "hausdorff", 
+            "surface_dice", 
+            "panoptic_quality",
+            "added_path_length", 
+            "false_negative_volume", 
+            "false_negative_path_length"
+        ],
+        description="Metrics to evaluate the segmentation results."
     )
 
 
@@ -115,6 +128,8 @@ class MedSAM3DInference:
 
         with open(Path(self.config.output_dir) / "config.json", "w") as f:
             json.dump(self.config.model_dump(), f, indent=4)
+
+        evaluator = Evaluator(metrics=self.config.evaluation_metrics)   
 
         results_df = []
 
@@ -169,10 +184,6 @@ class MedSAM3DInference:
                 bbox2d = [x_min, y_min, x_max, y_max]
 
                 # Get z-axis coordinates
-                # zs, _, _ = np.where(mask_array > 0)
-                # zs = np.unique(zs)
-                # assert z_min == min(zs)
-                # assert z_max == max(zs)
                 z_mid_orig = (z_min + z_max) // 2
                 z_mid = z_mid_orig - z_min
 
@@ -216,7 +227,9 @@ class MedSAM3DInference:
                     )
 
                     # Create mask prompt
-                    if self.config.propagate_with_bbox:
+                    if self.config.propagate_with_gt:
+                        mask_prompt = (cropped_mask[z_mid] == 1).astype(np.uint8)
+                    else:
                         _, _, out_mask_logits = self.predictor.add_new_points_or_box(
                             inference_state=inference_state,
                             frame_idx=z_mid,
@@ -224,8 +237,7 @@ class MedSAM3DInference:
                             box=bbox2d,
                         )
                         mask_prompt = (out_mask_logits[0] > 0.0).squeeze(0).cpu().numpy().astype(np.uint8)
-                    else:  # gt
-                        mask_prompt = (cropped_mask[z_mid] == 1).astype(np.uint8)
+                        
 
                     _, _, masks = self.predictor.add_new_mask(
                         inference_state, 
@@ -262,17 +274,13 @@ class MedSAM3DInference:
 
                     self.predictor.reset_state(inference_state)
 
-                    # Calculate metrics
-                    dice = dice_multi_class(
-                        (segs_3D == 1).astype(np.uint8), (mask_array == 1).astype(np.uint8)
-                    )
-                    apl = AddedPathLength(segs_3D == 1, mask_array == 1)
+                    eval_results = evaluator((segs_3D == 1).astype(np.uint8), (mask_array == 1).astype(np.uint8), spacing)
+
                     results_df.append({
                         "ID": patient_id, 
-                        "Volume_Dice": dice, 
-                        "Added_Path_Length": apl
+                        **eval_results
                     })
-                    print(f"Metrics for {patient_id}: Dice: {dice}, APL: {apl}")
+                    print(f"Evaluation results for {patient_id}: Volume Dice: {eval_results['volume_dice']}, APL: {eval_results['added_path_length']}")
 
                 # Save mask
                 save_mask = sitk.GetImageFromArray(segs_3D)
@@ -296,13 +304,15 @@ class MedSAM3DInference:
 @click.option('--pad_bbox', type=click.INT, default=0)
 @click.option('--pad_with_spacing', is_flag= True, default=False)
 @click.option('--overlay_bbox', is_flag=True, default=False)
+@click.option('--propagate_with_gt', is_flag=True, default=False)
 def inference(dataset_csv:str,
               output_dir:str,
               window_level:int = 40,
               window_width:int = 400,
               pad_bbox:int = 0,
               pad_with_spacing:bool = False,
-              overlay_bbox:bool = False) -> None:
+              overlay_bbox:bool = False,
+              propagate_with_gt:bool = False) -> None:
     """Run 3D segmentation with MedSAM2 on the files in dataset_csv. Save out the results to output_dir.
 
     Parameters
@@ -325,6 +335,12 @@ def inference(dataset_csv:str,
         Default set for soft tissues in head and neck.
     overlay_bbox:bool (default = False)
         Whether to overlay the bounding box on the image.
+    propagate_with_gt:bool (default = False)
+        Whether to propagate the mask with the ground truth mask. Default is False, which propagates with the bounding box.
+    pad_bbox:int (default = 0)
+        Padding width to apply to bounding box in all dimensions
+    pad_with_spacing:bool (default = False)
+        Whether to use the actual image spacing when padding the bounding box. Will scale the pad_bbox value in each dimension with the image spacing.
     """
     config = MedSAM3DInferenceConfig(
         dataset_csv=dataset_csv,
@@ -336,6 +352,7 @@ def inference(dataset_csv:str,
         pad_bbox=pad_bbox,
         pad_with_spacing=pad_with_spacing,
         overlay_bbox=overlay_bbox,
+        propagate_with_gt=propagate_with_gt,
     )
 
     inference_module = MedSAM3DInference(config)

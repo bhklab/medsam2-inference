@@ -32,7 +32,9 @@ RUN uv pip install --system --no-cache -e ./MedSAM2[dev]
 # Install additional dependencies
 RUN uv pip install --system --no-cache \
     "simpleitk>=2.5.2,<3" \
-    "pydantic>=2.11.7,<3"
+    "pydantic>=2.11.7,<3" \
+    "damply>=0.26.0,<0.27" \
+    "monai>=1.5.1,<2"
 
 # Clean up all non-essential files
 RUN rm -rf /var/lib/apt/lists/* \
