@@ -25,6 +25,7 @@ env.SCRIPTS = "${PIXI_PROJECT_ROOT}/workflow/scripts"
 [dependencies]
 python = "==3.12"
 pytorch-cuda = "==12.4"
+pydicom = ">=3.0.1,<4"
 
 [pypi-dependencies]
 MedSAM2 = { path = "MedSAM2", editable = true, extras = ["dev"] }
