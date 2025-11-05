@@ -327,8 +327,13 @@ def get_slice_num(slice_SOPUID: str,
     with open(crawl_path, 'r') as file: 
         crawl_json = file.read()
         crawl_dict = json.loads(crawl_json)
-
-        img_dict = crawl_dict[img_SOPUID]
+        #See if the crawl has the imaging data and if not, no slice info can be gotten for this patient. No image available to match the annotation. 
+        try: 
+            img_dict = crawl_dict[img_SOPUID]
+        except KeyError: 
+            logger.debug("Image with Series Instance UID: %s is not present in the crawl file. Please check if this file got successfully converted or if it existed.")
+            return None
+        
         inst_list = get_dcm_tag_info(dicom_dict = img_dict, 
                                      dicom_tag = 'instances')
         
@@ -418,6 +423,8 @@ def scrape_ann_information(sr_dcm_path: Path,
         slice_number = get_slice_num(slice_SOPUID = ref_slice, 
                                      img_SOPUID = ref_series_inst_UID,
                                      crawl_path = crawl_path)
+        if slice_number is None: 
+            continue
         
         #Get all information in same order as columns
         curr_info = [patient_ID, 
@@ -442,6 +449,9 @@ def scrape_ann_information(sr_dcm_path: Path,
         else: 
             bbox_info = pd.concat([bbox_info, curr_info_df], ignore_index = True).reset_index(drop = True)
 
+    if 'bbox_info' not in locals(): 
+        return pd.DataFrame() #Will be entered here if no imaging was found in correspondance with the SR
+    
     return bbox_info
 
 def get_all_bbox_info(dataset: str,
@@ -466,6 +476,7 @@ def get_all_bbox_info(dataset: str,
     all_bbox_info_df: pd.DataFrame 
         A dataframe of all measurements, their bounding boxes, and associated metadata. Each row represents a different measurement of the type(s) listed in dcm_values. 
     '''
+
     #Set up data paths 
     dataset_short = dataset.split("_")[-1] # Gets rid of gathering site information (e.g. TCIA), which should always be in front of the name of the dataset
     annotations_path = dirs.RAWDATA / Path(disease_site + "/" + dataset + "/images/annotations/" + dataset_short) 
@@ -478,6 +489,9 @@ def get_all_bbox_info(dataset: str,
                 curr_bbox_info = scrape_ann_information(sr_dcm_path = curr_sr_path,
                                                         crawl_path = crawl_path, 
                                                         dcm_val = dcm_val)
+                if curr_bbox_info.empty: 
+                    #Skip over SRs that do not have any imaging processed by med-imagetools
+                    continue
                 if 'all_bbox_info_df' not in locals(): 
                     all_bbox_info_df = curr_bbox_info
                 else: 
@@ -487,11 +501,16 @@ def get_all_bbox_info(dataset: str,
     all_bbox_info_df.to_csv(save_name)
 
 if __name__ == '__main__':
+
     #For testing getting all annotation measurement information in a given folder, run below
     dataset = 'TCIA_CPTAC-CCRCC'
     disease_site = 'Abdomen'
     dcm_values = ['Long Axis']
     save_path = dirs.PROCDATA
+
+    #Configure logger
+    logging.basicConfig(filename = dirs.LOGS / Path("find_ann_bboxes_" + dataset + ".log"), encoding='utf-8', level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
 
     get_all_bbox_info(dataset = dataset, 
                       disease_site = disease_site, 
