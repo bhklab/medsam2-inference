@@ -444,9 +444,63 @@ def scrape_ann_information(sr_dcm_path: Path,
 
     return bbox_info
 
-#For testing multiple annotations in one structured report handling, run below
-test_sr = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/images/annotations/CPTAC-CCRCC/all.sparrow-CPTAC-CCRCC-C3N-00494-1.3.6.1.4.1.14519.5.2.1.3320.3273.302796415778559455810165243851.dcm'
-crawl = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/.imgtools/images/crawl_db.json'
-bbox = scrape_ann_information(sr_dcm_path = test_sr,
-                              crawl_path = crawl)
-print(bbox)
+def get_all_bbox_info(dataset: str,
+                      disease_site: str, 
+                      dcm_values: list,
+                      save_path: Path):
+    '''
+    Go through all annotations for a given dataset, find all measurements and associated information, and combine all information into one global dataframe. 
+
+    Parameters
+    ----------
+    dataset: str
+        The full name of the dataset as it appears in the folder name (e.g. TCIA_CPTAC-CCRCC)
+    disease_site: str
+        Where the disease is located for a given dataset, appearing the same way it does in the folder name (e.g. Abdomen)
+    dcm_values: list 
+        The types of values you would like to search the relative data for. Usually the measurement type (e.g. Long Axis, Short Axis, Length, etc.)
+    save_path: Path 
+        Where to save the final bounding box dataframe to
+    Returns
+    ----------
+    all_bbox_info_df: pd.DataFrame 
+        A dataframe of all measurements, their bounding boxes, and associated metadata. Each row represents a different measurement of the type(s) listed in dcm_values. 
+    '''
+    #Set up data paths 
+    dataset_short = dataset.split("_")[-1] # Gets rid of gathering site information (e.g. TCIA), which should always be in front of the name of the dataset
+    annotations_path = dirs.RAWDATA / Path(disease_site + "/" + dataset + "/images/annotations/" + dataset_short) 
+    crawl_path = dirs.RAWDATA / Path(disease_site + "/" + dataset + "/.imgtools/images/crawl_db.json")
+
+    for struct_report in annotations_path.iterdir(): #Go through all structured reports inside of the annotations folder
+        if struct_report.is_file(): #In case there's a folder inside of the annotation folder for some reason
+            curr_sr_path = annotations_path / struct_report
+            for dcm_val in dcm_values: #Check for each of the DICOM values you're looking for (e.g. you can look for both Long Axis and Short Axis, or Long Axis an Length)
+                curr_bbox_info = scrape_ann_information(sr_dcm_path = curr_sr_path,
+                                                        crawl_path = crawl_path, 
+                                                        dcm_val = dcm_val)
+                if 'all_bbox_info_df' not in locals(): 
+                    all_bbox_info_df = curr_bbox_info
+                else: 
+                    all_bbox_info_df = pd.concat([all_bbox_info_df, curr_bbox_info], ignore_index = True).reset_index(drop = True)
+    
+    save_name = save_path / 'recist_bbox_info.csv'
+    all_bbox_info_df.to_csv(save_name)
+
+if __name__ == '__main__':
+    #For testing getting all annotation measurement information in a given folder, run below
+    dataset = 'TCIA_CPTAC-CCRCC'
+    disease_site = 'Abdomen'
+    dcm_values = ['Long Axis']
+    save_path = dirs.PROCDATA
+
+    get_all_bbox_info(dataset = dataset, 
+                      disease_site = disease_site, 
+                      dcm_values = dcm_values, 
+                      save_path = save_path)
+    
+    # #For testing multiple annotations in one structured report handling, run below
+    # test_sr = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/images/annotations/CPTAC-CCRCC/all.sparrow-CPTAC-CCRCC-C3N-00494-1.3.6.1.4.1.14519.5.2.1.3320.3273.302796415778559455810165243851.dcm'
+    # crawl = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/.imgtools/images/crawl_db.json'
+    # bbox = scrape_ann_information(sr_dcm_path = test_sr,
+    #                             crawl_path = crawl)
+    # print(bbox)
