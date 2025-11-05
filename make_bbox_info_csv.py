@@ -253,7 +253,7 @@ def find_related_data(all_dcm_info_df: pd.DataFrame,
 
     #Check if subset is empty
     if dcm_value_subset.empty: 
-        print("No information found for the DICOM value: %s", dcm_value)
+        logger.debug("No information found for the DICOM value: %s", dcm_value)
         return None
     
     #Find all information at the closest location possible to the DICOM value 
@@ -331,7 +331,7 @@ def get_slice_num(slice_SOPUID: str,
         try: 
             img_dict = crawl_dict[img_SOPUID]
         except KeyError: 
-            logger.debug("Image with Series Instance UID: %s is not present in the crawl file. Please check if this file got successfully converted or if it existed.")
+            logger.debug("Image with Series Instance UID: %s is not present in the crawl file. Please check if this file got successfully converted or if it existed.", img_SOPUID)
             return None
         
         inst_list = get_dcm_tag_info(dicom_dict = img_dict, 
@@ -411,6 +411,9 @@ def scrape_ann_information(sr_dcm_path: Path,
     related_data_df = find_related_data(all_dcm_info_df = matched_data_df, 
                                         dcm_value = dcm_val)
     
+    if related_data_df is None: 
+        return pd.DataFrame() #Will be entered if  no related data was found 
+    
     # Go through all measurements found in the structured report and their related information and add to bbox_info dataframe
     for measure_info in related_data_df: 
         measure_len = measure_info[measure_info['SearchTerm'] == 'Numeric Value']['Value'].iloc[0]
@@ -448,16 +451,18 @@ def scrape_ann_information(sr_dcm_path: Path,
             bbox_info = curr_info_df
         else: 
             bbox_info = pd.concat([bbox_info, curr_info_df], ignore_index = True).reset_index(drop = True)
-
     if 'bbox_info' not in locals(): 
-        return pd.DataFrame() #Will be entered here if no imaging was found in correspondance with the SR
+        return pd.DataFrame()
     
     return bbox_info
 
+@click.command()
+@click.option('--dataset', help = 'Name of dataset as it appears in folder name (e.g. TCIA_CPTAC-CCRCC)')
+@click.option('--disease_site', help = 'Where disease is located as it appears in folder name (e.g. Abdomen)')
+@click.option('--dcm_values', multiple = True, default = ['Long Axis'], help = 'A list of DICOM values you would like to search the relative data for. Usually the measurement type (e.g. Long Axis, Short Axis, Length, etc.)')
 def get_all_bbox_info(dataset: str,
                       disease_site: str, 
-                      dcm_values: list,
-                      save_path: Path):
+                      dcm_values: list):
     '''
     Go through all annotations for a given dataset, find all measurements and associated information, and combine all information into one global dataframe. 
 
@@ -469,14 +474,7 @@ def get_all_bbox_info(dataset: str,
         Where the disease is located for a given dataset, appearing the same way it does in the folder name (e.g. Abdomen)
     dcm_values: list 
         The types of values you would like to search the relative data for. Usually the measurement type (e.g. Long Axis, Short Axis, Length, etc.)
-    save_path: Path 
-        Where to save the final bounding box dataframe to
-    Returns
-    ----------
-    all_bbox_info_df: pd.DataFrame 
-        A dataframe of all measurements, their bounding boxes, and associated metadata. Each row represents a different measurement of the type(s) listed in dcm_values. 
     '''
-
     #Set up data paths 
     dataset_short = dataset.split("_")[-1] # Gets rid of gathering site information (e.g. TCIA), which should always be in front of the name of the dataset
     annotations_path = dirs.RAWDATA / Path(disease_site + "/" + dataset + "/images/annotations/" + dataset_short) 
@@ -497,26 +495,38 @@ def get_all_bbox_info(dataset: str,
                 else: 
                     all_bbox_info_df = pd.concat([all_bbox_info_df, curr_bbox_info], ignore_index = True).reset_index(drop = True)
     
-    save_name = save_path / 'recist_bbox_info.csv'
+    save_path = dirs.PROCDATA / Path(disease_site) / Path(dataset) / Path('bbox_gen')
+    save_name = save_path / Path('recist_bbox_info.csv')
+
+    if not save_path.exists(): 
+        Path(save_path.mkdir(parents = True, exist_ok = True))
+
     all_bbox_info_df.to_csv(save_name)
 
 if __name__ == '__main__':
-
-    #For testing getting all annotation measurement information in a given folder, run below
-    dataset = 'TCIA_CPTAC-CCRCC'
-    disease_site = 'Abdomen'
-    dcm_values = ['Long Axis']
-    save_path = dirs.PROCDATA
-
     #Configure logger
-    logging.basicConfig(filename = dirs.LOGS / Path("find_ann_bboxes_" + dataset + ".log"), encoding='utf-8', level=logging.DEBUG)
+    logging.basicConfig(filename = dirs.LOGS / Path("find_ann_bboxes.log"), encoding='utf-8', level=logging.DEBUG)
     logger = logging.getLogger(__name__)
-
-    get_all_bbox_info(dataset = dataset, 
-                      disease_site = disease_site, 
-                      dcm_values = dcm_values, 
-                      save_path = save_path)
     
+    get_all_bbox_info()
+
+    # #For testing getting all annotation measurement information in a given folder, run below
+    # dataset = 'TCIA_CPTAC-CCRCC'
+    # disease_site = 'Abdomen'
+    # dcm_values = ['Long Axis']
+    # save_path = dirs.PROCDATA
+
+    # #Configure logger
+    # logging.basicConfig(filename = dirs.LOGS / Path("find_ann_bboxes_" + dataset + ".log"), encoding='utf-8', level=logging.DEBUG)
+    # logger = logging.getLogger(__name__)
+
+    # get_all_bbox_info(dataset = dataset, 
+    #                   disease_site = disease_site, 
+    #                   dcm_values = dcm_values, 
+    #                   save_path = save_path)
+    
+    ##------------------------------------------------##
+
     # #For testing multiple annotations in one structured report handling, run below
     # test_sr = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/images/annotations/CPTAC-CCRCC/all.sparrow-CPTAC-CCRCC-C3N-00494-1.3.6.1.4.1.14519.5.2.1.3320.3273.302796415778559455810165243851.dcm'
     # crawl = dirs.RAWDATA / 'Abdomen/TCIA_CPTAC-CCRCC/.imgtools/images/crawl_db.json'
