@@ -9,6 +9,7 @@ class Evaluator:
             "volume_dice", 
             "jaccard", 
             "hausdorff", 
+            "surface_distance",
             "surface_dice", 
             "panoptic_quality",
             "added_path_length", 
@@ -29,6 +30,8 @@ class Evaluator:
                     results[metric] = self._jaccard(preds, targets)
                 case "hausdorff":
                     results[metric] = self._hausdorff(preds, targets, spacing)
+                case "surface_distance":
+                    results[metric] = self._surface_distance(preds, targets, spacing)
                 case "surface_dice":
                     results[metric] = self._surface_dice(preds, targets, spacing)
                 case "panoptic_quality":
@@ -58,12 +61,18 @@ class Evaluator:
         h = met.compute_hausdorff_distance(preds, targets, percentile=95, include_background=False, spacing=spacing)
         return h[0].item()
 
-    def _surface_dice(self, preds: np.ndarray, targets: np.ndarray, spacing: tuple[float, float, float]) -> float:
+    def _surface_distance(self, preds: np.ndarray, targets: np.ndarray, spacing: tuple[float, float, float]) -> float:
         preds = torch.from_numpy(preds).unsqueeze(0).unsqueeze(0)
         targets = torch.from_numpy(targets).unsqueeze(0).unsqueeze(0)
         s = met.compute_average_surface_distance(preds, targets, include_background=False, spacing=spacing)
         return s[0].item()
-
+    
+    def _surface_dice(self, preds: np.ndarray, targets: np.ndarray, spacing: tuple[float, float, float]) -> float:
+        preds = torch.from_numpy(preds).unsqueeze(0).unsqueeze(0)
+        targets = torch.from_numpy(targets).unsqueeze(0).unsqueeze(0)
+        sd = met.compute_surface_dice(preds, targets, include_background=False, spacing=spacing, class_thresholds=[5]) #TODO: Continue research on finding appropriate class threshold. Set to 5 pixels for now. 
+        return sd[0].item()
+    
     def _panoptic_quality(self, preds: np.ndarray, targets: np.ndarray) -> float:
         preds = torch.from_numpy(preds).unsqueeze(0).unsqueeze(0)
         targets = torch.from_numpy(targets).unsqueeze(0).unsqueeze(0)
