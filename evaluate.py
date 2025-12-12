@@ -1,6 +1,7 @@
 import numpy as np
 import monai.metrics as met
 import torch
+import pandas as pd
 
 class Evaluator:
     def __init__(
@@ -45,7 +46,18 @@ class Evaluator:
                 case _:
                     raise ValueError(f"Metric {metric} not supported")
         
-        return results   
+        return results  
+
+    def summarize(self, results: pd.DataFrame) -> str:
+        summary = "Summary of evaluation results:\n"
+
+        for metric in self.metrics:
+            if metric == "panoptic_quality":
+                percent_positive = (results[metric] == 1.0).sum() / len(results[metric]) * 100
+                summary += f"    {metric}: Percent positive: {percent_positive:.2f}%\n"
+            else:
+                summary += f"    {metric}: {results[metric].mean()}\n"
+        return summary
 
     def _volume_dice(self, preds: np.ndarray, targets: np.ndarray) -> float:
         dc = (np.sum(preds[targets == 1]) * 2.0) / (np.sum(preds) + np.sum(targets))

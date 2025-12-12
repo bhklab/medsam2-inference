@@ -274,7 +274,7 @@ class MedSAM3DInference:
 
                     self.predictor.reset_state(inference_state)
 
-                    eval_results = evaluator((segs_3D == 1).astype(np.uint8), (mask_array == 1).astype(np.uint8), spacing)
+                    eval_results = evaluator((segs_3D > 0).astype(np.uint8), (mask_array > 0).astype(np.uint8), spacing)
 
                     results_df.append({
                         "ID": patient_id, 
@@ -295,6 +295,7 @@ class MedSAM3DInference:
         results_df = pd.DataFrame(results_df)
         results_df.to_csv(Path(self.config.output_dir) / "results.csv", index=False)
 
+        print(evaluator.summarize(results_df))
 
 @click.command()
 @click.argument('dataset_csv', type=click.Path(exists=True))
